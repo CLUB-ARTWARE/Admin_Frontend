@@ -8,6 +8,7 @@ import Presence from "./Pages/PresenceAndAbsence";
 import Documents from "./Pages/Documents";
 import Cellules from "./Pages/Cellules";
 import Announcement from "./Pages/Announecement";
+import Dashboard from "./Pages/Statistique";
 
 function App() {
   return (
@@ -23,6 +24,8 @@ function App() {
           <Route path="documents" element={<Documents />} />
           <Route path="cellules" element={< Cellules/>} />
           <Route path="announce" element={< Announcement/>} />
+                    <Route path="dashboard" element={< Dashboard/>} />
+
         
         
         </Route>
