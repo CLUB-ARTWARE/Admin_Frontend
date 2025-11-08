@@ -2,7 +2,7 @@ import axios from "axios";
 import { useAuthStore } from "../stores/authStore"; // adapte le chemin
 
 const axiosInstance = axios.create({
-  baseURL: "http://127.0.0.1:3500",
+  baseURL: "https://artware-je4tg.ondigitalocean.app",
   withCredentials: true,
 });
 
@@ -50,3 +50,4 @@ axiosInstance.interceptors.response.use(
 );
 
 export { axiosInstance };
+
