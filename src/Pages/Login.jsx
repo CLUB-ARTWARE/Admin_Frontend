@@ -47,7 +47,7 @@ export default function AdminLogin() {
     
     try {
       await loginAdmin(formData)
-      navigate("/admin") 
+      navigate("/admin/dashboard") 
     } catch (err) {
       console.error("Erreur de connexion:", err)
       
