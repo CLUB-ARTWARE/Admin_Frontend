@@ -12,7 +12,7 @@ clearUsers: () => set({
   absentUsers: []
 }),
 
-  fetchEvents: async (token) => {
+  fetchEvents: async () => {
     set({ loading: true });
     try {
       const res = await axiosInstance.get("/API/events", {
@@ -24,7 +24,7 @@ clearUsers: () => set({
     }
   },
 
-  createEvent: async (formData, token) => {
+  createEvent: async (formData) => {
     try {
       const res = await axiosInstance.post("/API/events", formData, {
       });
@@ -36,7 +36,7 @@ clearUsers: () => set({
     }
   },
 
-  updateEvent: async (eventId, payload, token) => {
+  updateEvent: async (eventId, payload) => {
     try {
       const res = await axiosInstance.patch(`/API/events/${eventId}`, payload, {
         headers: {
@@ -56,7 +56,7 @@ clearUsers: () => set({
     }
   },
 
-  deleteEvent: async (eventId, token) => {
+  deleteEvent: async (eventId) => {
     try {
       const res = await axiosInstance.delete(`/API/events/${eventId}`, {
       });
@@ -68,7 +68,7 @@ clearUsers: () => set({
     }
   },
 
-  fetchRegistrations: async (eventId, token) => {
+  fetchRegistrations: async (eventId) => {
     try {
       const res = await axiosInstance.get(`/API/events/${eventId}/registrations`, {
       });
