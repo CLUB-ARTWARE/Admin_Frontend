@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useDocumentStore } from "../stores/documentStore";
+import { useEventStore } from "../stores/eventStore"
 import { 
   FileText, 
   Image, 
@@ -15,7 +16,8 @@ import {
   Search,
   Loader2,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Calendar
 } from "lucide-react";
 import { FaFilePdf, FaFileWord, FaFileExcel, FaFilePowerpoint, FaFileCode } from "react-icons/fa";
 
@@ -124,6 +126,14 @@ function DocumentCard({ document, onView, onDelete, isDeleting }) {
             <h3 className="font-semibold text-gray-900 truncate text-lg">
               {document.title}
             </h3>
+            {document.eventTitle && (
+              <div className="flex items-center mt-1">
+                <Calendar className="w-3 h-3 text-gray-400 mr-1" />
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  {document.eventTitle}
+                </span>
+              </div>
+            )}
             <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
               {document.filename && (
                 <span className="truncate">{document.filename}</span>
@@ -328,8 +338,11 @@ export default function Documents() {
     clearError,
   } = useDocumentStore();
 
+  const { events, fetchEvents, loading: eventsLoading } = useEventStore();
+
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -337,7 +350,8 @@ export default function Documents() {
 
   useEffect(() => {
     getDocuments();
-  }, [getDocuments]);
+    fetchEvents();
+  }, [getDocuments, fetchEvents]);
 
   const handleUpload = async (e) => {
     e.preventDefault();
@@ -350,16 +364,24 @@ export default function Documents() {
     const formData = new FormData();
     formData.append("title", title.trim());
     formData.append("uploaded_document", file);
+    
+    // Ajouter l'event_id seulement si un événement est sélectionné
+    if (selectedEventId) {
+      formData.append("event_id", selectedEventId);
+    }
 
     const success = await uploadDocument(formData);
     
     if (success) {
       setUploadSuccess(true);
       setTimeout(() => setUploadSuccess(false), 5000);
+   
+      // Réinitialiser le formulaire
+      setFile(null);
+      setTitle("");
+      setSelectedEventId("");
     }
     
-    setFile(null);
-    setTitle("");
     setIsUploading(false);
   };
 
@@ -375,8 +397,21 @@ export default function Documents() {
 
   const filteredDocuments = documents.filter(doc =>
     doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.filename?.toLowerCase().includes(searchTerm.toLowerCase())
+    doc.filename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.eventTitle?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Enrichir les documents avec les titres d'événements
+  const documentsWithEventTitles = documents.map(doc => {
+    if (doc.event_id && events.length > 0) {
+      const event = events.find(evt => evt.id === doc.event_id || evt._id === doc.event_id);
+      return {
+        ...doc,
+        eventTitle: event ? event.title : 'Événement inconnu'
+      };
+    }
+    return doc;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -424,7 +459,7 @@ export default function Documents() {
           )}
 
           <form onSubmit={handleUpload} className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Titre du document *
@@ -438,6 +473,37 @@ export default function Documents() {
                   required
                   disabled={isUploading}
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Associer à un événement
+                </label>
+                <div className="relative">
+                  {eventsLoading ? (
+                    <div className="flex items-center justify-center border border-gray-300 rounded-lg px-4 py-3 bg-gray-50">
+                      <Loader2 className="w-4 h-4 text-gray-400 animate-spin mr-2" />
+                      <span className="text-gray-500">Chargement des événements...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <select
+                        value={selectedEventId}
+                        onChange={(e) => setSelectedEventId(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none bg-white"
+                        disabled={isUploading}
+                      >
+                        <option value="">Sélectionner un événement </option>
+                        {events.map((event) => (
+                          <option key={event.id || event._id} value={event.id || event._id}>
+                            {event.title}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -515,7 +581,13 @@ export default function Documents() {
               </div>
             ) : (
               <div className="grid gap-4">
-                {filteredDocuments.map((doc) => (
+                {documentsWithEventTitles
+                  .filter(doc =>
+                    doc.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    doc.filename?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    doc.eventTitle?.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((doc) => (
                   <DocumentCard
                     key={doc.id || doc._id}
                     document={doc}
