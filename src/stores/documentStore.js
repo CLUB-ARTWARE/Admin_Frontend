@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
+import toast from "react-hot-toast";
 
 export const useDocumentStore = create((set, get) => ({
   documents: [],
@@ -33,6 +34,7 @@ export const useDocumentStore = create((set, get) => ({
         documents: [...state.documents, res.data],
         loading: false,
       }));
+      toast.success("document ajoutee")
     } catch (err) {
       console.error("Erreur d’upload :", err);
       set({
