@@ -233,37 +233,27 @@ export default function Presence() {
     ), [registrations, searchTerm]
   )
 
-  // Get registration users who are not in present or absent lists
-  const getPendingRegistrations = useMemo(() => {
-    const presentUserIds = new Set(presentUsers.map(user => user.user_id))
-    const absentUserIds = new Set(absentUsers.map(user => user.user_id))
-    
-    return filteredRegistrations.filter(registration => {
-      // Correction: extraire l'ID utilisateur correctement depuis l'objet registration
-      const userId = registration.user?.user_id || registration.user_id
-      return !presentUserIds.has(userId) && !absentUserIds.has(userId)
-    })
-  }, [filteredRegistrations, presentUsers, absentUsers])
+
 
   const getEventStats = () => {
     // Correction: utiliser le tableau registrations directement
     const totalRegistrations = registrations.length
     const presentCount = presentUsers.length
     const absentCount = absentUsers.length
-    const pendingCount = getPendingRegistrations.length
+  
     
     const presentPercentage = totalRegistrations > 0 ? (presentCount / totalRegistrations) * 100 : 0
     const absentPercentage = totalRegistrations > 0 ? (absentCount / totalRegistrations) * 100 : 0
-    const pendingPercentage = totalRegistrations > 0 ? (pendingCount / totalRegistrations) * 100 : 0
+  
     
     return { 
       totalRegistrations,
       presentPercentage, 
       absentPercentage,
-      pendingPercentage,
+ 
       presentCount,
       absentCount,
-      pendingCount
+  
     }
   }
 
@@ -399,18 +389,7 @@ export default function Presence() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">En attente</p>
-                      <p className="text-3xl font-bold text-orange-600 mt-1">{stats.pendingCount}</p>
-                      <p className="text-xs text-gray-500 mt-1">{stats.pendingPercentage.toFixed(1)}%</p>
-                    </div>
-                    <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <UserPlus className="h-6 w-6 text-orange-600" />
-                    </div>
-                  </div>
-                </div>
+               
 
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center justify-between">
@@ -488,7 +467,7 @@ export default function Presence() {
                         { key: "all", label: "Tous", icon: Users, count: stats.totalRegistrations },
                         { key: "present", label: "Présents", icon: UserCheck, count: stats.presentCount },
                         { key: "absent", label: "Absents", icon: UserX, count: stats.absentCount },
-                        { key: "registrations", label: "Inscrits", icon: UserPlus, count: stats.pendingCount }
+                    
                       ].map(({ key, label, icon: Icon, count }) => (
                         <button
                           key={key}
@@ -520,9 +499,7 @@ export default function Presence() {
                       <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                     </button>
 
-                    <button className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition">
-                      <Download className="h-4 w-4" />
-                    </button>
+                   
                   </div>
                 </div>
               </div>
@@ -698,98 +675,7 @@ export default function Presence() {
                       </div>
                     )}
 
-                    {/* Inscriptions en attente */}
-                    {(activeTab === "all" || activeTab === "registrations") && (
-                      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="p-6 border-b border-gray-200">
-                          <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                            <h3 className="font-semibold flex items-center gap-2">
-                              <UserPlus className="h-5 w-5" />
-                              Inscriptions en attente ({getPendingRegistrations.length})
-                            </h3>
-                          </div>
-                        </div>
-
-                        <div className="p-6">
-                          {getPendingRegistrations.length === 0 ? (
-                            <div className="text-center py-8 bg-gray-50 rounded-lg">
-                              <ListTodo className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                              <p className="text-gray-600 font-medium">Aucune inscription en attente</p>
-                              <p className="text-sm text-gray-500 mt-1">
-                                Tous les inscrits ont été marqués comme présents ou absents
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="grid gap-4">
-                              {getPendingRegistrations.map((registration) => {
-                                // Correction: extraire l'utilisateur depuis registration.user
-                                const user = registration.user
-                                const userId = user?.user_id || registration.id
-                                
-                                return (
-                                  <div
-                                    key={registration.id}
-                                    className="flex items-center justify-between p-4 rounded-lg border border-orange-200 bg-orange-50"
-                                  >
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                      <img
-                                        src={user?.profile_image_url || "/placeholder.svg"}
-                                        alt={`${user?.first_name} ${user?.last_name}`}
-                                        className="w-12 h-12 rounded-lg object-cover"
-                                      />
-                                      
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-2">
-                                          <p className="font-semibold text-sm">
-                                            {user?.first_name} {user?.last_name}
-                                          </p>
-                                          {getRegistrationStatusBadge(registration)}
-                                        </div>
-                                        
-                                        <div className="flex items-center gap-3 text-xs text-gray-600 mb-2">
-                                          <div className="flex items-center gap-1">
-                                            <Mail className="h-3 w-3" />
-                                            <span>{user?.email}</span>
-                                          </div>
-                                          {user?.phone_number && (
-                                            <div className="flex items-center gap-1">
-                                              <Phone className="h-3 w-3" />
-                                              <span>{user?.phone_number}</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                        
-                                        <div className="flex items-center gap-2">
-                                          {getLevelBadge(user?.level)}
-                                          <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
-                                            <BookOpen className="h-3 w-3" />
-                                            {user?.specialty}
-                                          </span>
-                                        </div>
-
-                                        <div className="mt-2 text-xs text-gray-500">
-                                          Inscrit le {new Date(registration.registered_at).toLocaleDateString('fr-FR')}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    
-                                    <button
-                                      onClick={() => handleSetUserPresent(userId)}
-                                      disabled={actionLoading === userId}
-                                      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      <Check className="h-4 w-4" />
-                                      Présent
-                                    </button>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                
                   </>
                 )}
               </div>
