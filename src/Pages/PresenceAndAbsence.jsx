@@ -71,7 +71,6 @@ export default function Presence() {
         fetchRegistrations(eventId)
       ])
       
-      // Correction: accéder à la propriété registrations de l'objet
       setRegistrations(registrationsData?.registrations || [])
     } catch (error) {
       console.error("Error fetching users:", error)
@@ -92,7 +91,6 @@ export default function Presence() {
         fetchRegistrations(selectedEvent)
       ])
       
-      // Correction: accéder à la propriété registrations de l'objet
       setRegistrations(registrationsData?.registrations || [])
       toast.success("Liste actualisée")
     } catch (error) {
@@ -124,6 +122,57 @@ export default function Presence() {
 
   const formatTime = (timeString) => {
     return timeString?.substring(0, 5)
+  }
+
+  // Fonction pour générer les initiales
+  const getInitials = (firstName, lastName) => {
+    const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : ''
+    const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : ''
+    return `${firstInitial}${lastInitial}`
+  }
+
+  // Fonction pour générer une couleur basée sur le nom
+  const getAvatarColor = (firstName, lastName) => {
+    const name = `${firstName}${lastName}`
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500', 
+      'bg-red-500', 'bg-yellow-500', 'bg-indigo-500', 'bg-teal-500'
+    ]
+    let hash = 0
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    return colors[Math.abs(hash) % colors.length]
+  }
+
+  // Composant d'avatar réutilisable
+  const UserAvatar = ({ user, size = "w-12 h-12", showStatus = false, status = "present" }) => {
+    const hasImage = user?.profile_image_url
+    const initials = getInitials(user?.first_name, user?.last_name)
+    const bgColor = getAvatarColor(user?.first_name, user?.last_name)
+    
+    return (
+      <div className="relative">
+        {hasImage ? (
+          <img
+            src={user.profile_image_url}
+            alt={`${user.first_name} ${user.last_name}`}
+            className={`${size} rounded-lg object-cover`}
+          />
+        ) : (
+          <div className={`${size} ${bgColor} rounded-lg flex items-center justify-center text-white font-semibold text-sm`}>
+            {initials}
+          </div>
+        )}
+        {showStatus && (
+          <div className={`absolute -bottom-1 -right-1 w-5 h-5 ${
+            status === 'present' ? 'bg-green-500' : 'bg-red-500'
+          } rounded-full border-2 border-white flex items-center justify-center`}>
+            <Check className="h-3 w-3 text-white" />
+          </div>
+        )}
+      </div>
+    )
   }
 
   const getStatusBadge = (user) => {
@@ -224,7 +273,6 @@ export default function Presence() {
     ), [absentUsers, searchTerm]
   )
 
-  // Correction: accéder directement au tableau registrations
   const filteredRegistrations = useMemo(() => 
     registrations.filter(registration =>
       `${registration.user?.first_name} ${registration.user?.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -233,27 +281,20 @@ export default function Presence() {
     ), [registrations, searchTerm]
   )
 
-
-
   const getEventStats = () => {
-    // Correction: utiliser le tableau registrations directement
     const totalRegistrations = registrations.length
     const presentCount = presentUsers.length
     const absentCount = absentUsers.length
-  
     
     const presentPercentage = totalRegistrations > 0 ? (presentCount / totalRegistrations) * 100 : 0
     const absentPercentage = totalRegistrations > 0 ? (absentCount / totalRegistrations) * 100 : 0
-  
     
     return { 
       totalRegistrations,
       presentPercentage, 
       absentPercentage,
- 
       presentCount,
       absentCount,
-  
     }
   }
 
@@ -350,7 +391,7 @@ export default function Presence() {
           {selectedEvent ? (
             <div className="space-y-6">
               {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -388,8 +429,6 @@ export default function Presence() {
                     </div>
                   </div>
                 </div>
-
-               
 
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center justify-between">
@@ -467,7 +506,6 @@ export default function Presence() {
                         { key: "all", label: "Tous", icon: Users, count: stats.totalRegistrations },
                         { key: "present", label: "Présents", icon: UserCheck, count: stats.presentCount },
                         { key: "absent", label: "Absents", icon: UserX, count: stats.absentCount },
-                    
                       ].map(({ key, label, icon: Icon, count }) => (
                         <button
                           key={key}
@@ -498,8 +536,6 @@ export default function Presence() {
                     >
                       <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                     </button>
-
-                   
                   </div>
                 </div>
               </div>
@@ -544,16 +580,7 @@ export default function Presence() {
                                   key={user.user_id}
                                   className="flex items-center gap-4 p-4 rounded-lg border border-green-200 bg-green-50"
                                 >
-                                  <div className="relative">
-                                    <img
-                                      src={user.profile_image_url || "/placeholder.svg"}
-                                      alt={`${user.first_name} ${user.last_name}`}
-                                      className="w-12 h-12 rounded-lg object-cover"
-                                    />
-                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                                      <Check className="h-3 w-3 text-white" />
-                                    </div>
-                                  </div>
+                                  <UserAvatar user={user} showStatus={true} status="present" />
                                   
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-2">
@@ -622,11 +649,7 @@ export default function Presence() {
                                   className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-red-50"
                                 >
                                   <div className="flex items-center gap-4 flex-1 min-w-0">
-                                    <img
-                                      src={user.profile_image_url || "/placeholder.svg"}
-                                      alt={`${user.first_name} ${user.last_name}`}
-                                      className="w-12 h-12 rounded-lg object-cover grayscale opacity-80"
-                                    />
+                                    <UserAvatar user={user} />
                                     
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center gap-2 mb-2">
@@ -674,8 +697,6 @@ export default function Presence() {
                         </div>
                       </div>
                     )}
-
-                
                   </>
                 )}
               </div>
