@@ -15,7 +15,7 @@ export const useAuthStore = create((set) => ({
       const res = await axiosInstance.post("/login", data);
 
       // Vérifie le rôle (seulement admin)
-      if (res.data.user.role_id !== 3) {
+      if (res.data.user.role_id !== 2 || res.data.user.role_id !== 3) {
         set({ loading: false });
         toast.error("Accès refusé : espace réservé aux admins");
         return;
