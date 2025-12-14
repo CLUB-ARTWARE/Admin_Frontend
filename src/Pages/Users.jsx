@@ -1,21 +1,21 @@
-"use client"
-
 import { useEffect, useState } from "react"
-import { useAuthStore } from "../stores/authStore"
 import { useUserStore } from "../stores/useUserStore"
-import { Search, Check, X, Trash2, UserCheck, UserX, AlertCircle, Phone, Calendar, GraduationCap } from "lucide-react"
+import { Search, Check, X, Trash2, UserCheck, UserX, AlertCircle, Phone, Calendar, GraduationCap, Shield, Crown, Users, Edit, Save, XCircle } from "lucide-react"
 import toast from "react-hot-toast"
 
 const User = () => {
-  const { users, loading, fetchUsers, acceptUser, rejectUser, deleteUser } = useUserStore()
-
+  const { users, loading, fetchUsers, acceptUser, rejectUser, deleteUser, changeRole } = useUserStore()
 
   const [rejectReason, setRejectReason] = useState("")
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [filterRole, setFilterRole] = useState("all")
   const [showRejectModal, setShowRejectModal] = useState(false)
+  const [showRoleModal, setShowRoleModal] = useState(false)
   const [actionLoading, setActionLoading] = useState(null)
+  const [editingRoleId, setEditingRoleId] = useState(null)
+  const [selectedRole, setSelectedRole] = useState("")
 
   useEffect(() => {
     fetchUsers()
@@ -23,10 +23,10 @@ const User = () => {
 
   const handleAccept = async (userId) => {
     setActionLoading(userId)
-    await acceptUser(userId )
-    await  fetchUsers()
+    await acceptUser(userId)
+    await fetchUsers()
     setActionLoading(null)
-    toast.success("l'utilisateur accepte")
+    toast.success("Utilisateur accepté")
   }
 
   const handleReject = async (userId) => {
@@ -35,21 +35,51 @@ const User = () => {
       return
     }
     setActionLoading(userId)
-    await rejectUser(userId, rejectReason )
+    await rejectUser(userId, rejectReason)
     setRejectReason("")
     setSelectedUserId(null)
     setShowRejectModal(false)
     setActionLoading(null)
     fetchUsers()
-    toast.error("l'utilisatuer est rejeter")
+    toast.error("Utilisateur rejeté")
   }
 
   const handleDelete = async (userId) => {
     if (window.confirm("Voulez-vous vraiment supprimer cet utilisateur ?")) {
       setActionLoading(userId)
-      await deleteUser(userId )
+      await deleteUser(userId)
       setActionLoading(null)
       fetchUsers()
+    }
+  }
+
+  const handleRoleChange = async (userId) => {
+    if (!selectedRole) {
+      toast.error("Veuillez sélectionner un rôle")
+      return
+    }
+
+    setActionLoading(userId)
+    try {
+      // Convertir le nom du rôle en ID
+      const roleMap = {
+        "Membre": 1,
+        "Admin": 2,
+        "Président": 3
+      }
+      
+      const roleId = roleMap[selectedRole]
+      await changeRole(userId, roleId)
+      
+      toast.success("Rôle modifié avec succès")
+      setShowRoleModal(false)
+      setSelectedRole("")
+      setEditingRoleId(null)
+      fetchUsers()
+    } catch (error) {
+      toast.error("Erreur lors du changement de rôle")
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -59,10 +89,74 @@ const User = () => {
     setRejectReason("")
   }
 
+  const openRoleModal = (userId, currentRole) => {
+    setSelectedUserId(userId)
+    setSelectedRole(getRoleName(currentRole))
+    setShowRoleModal(true)
+  }
+
   const closeRejectModal = () => {
     setShowRejectModal(false)
     setSelectedUserId(null)
     setRejectReason("")
+  }
+
+  const closeRoleModal = () => {
+    setShowRoleModal(false)
+    setSelectedUserId(null)
+    setSelectedRole("")
+  }
+
+  const startRoleEditing = (userId, currentRole) => {
+    setEditingRoleId(userId)
+    setSelectedRole(getRoleName(currentRole))
+  }
+
+  const cancelRoleEditing = () => {
+    setEditingRoleId(null)
+    setSelectedRole("")
+  }
+
+  const getRoleName = (roleId) => {
+    switch (roleId) {
+      case 1: return "Membre"
+      case 2: return "Admin"
+      case 3: return "Président"
+      default: return "Membre"
+    }
+  }
+
+  const getRoleBadge = (roleId) => {
+    switch (roleId) {
+      case 1:
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <Users className="h-3 w-3 mr-1" />
+            Membre
+          </span>
+        )
+      case 2:
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+            <Shield className="h-3 w-3 mr-1" />
+            Admin
+          </span>
+        )
+      case 3:
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+            <Crown className="h-3 w-3 mr-1" />
+            Président
+          </span>
+        )
+      default:
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <Users className="h-3 w-3 mr-1" />
+            Membre
+          </span>
+        )
+    }
   }
 
   const filteredUsers = users.filter((user) => {
@@ -72,13 +166,19 @@ const User = () => {
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.specialty && user.specialty.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesFilter =
+    const matchesStatus =
       filterStatus === "all" ||
       (filterStatus === "allowed" && user.status === "allowed") ||
       (filterStatus === "pending" && user.status === "pending") ||
       (filterStatus === "denied" && user.status === "denied")
 
-    return matchesSearch && matchesFilter
+    const matchesRole =
+      filterRole === "all" ||
+      (filterRole === "member" && user.role_id === 1) ||
+      (filterRole === "admin" && user.role_id === 2) ||
+      (filterRole === "president" && user.role_id === 3)
+
+    return matchesSearch && matchesStatus && matchesRole
   })
 
   const stats = {
@@ -86,6 +186,9 @@ const User = () => {
     allowed: users.filter((u) => u.status === "allowed").length,
     pending: users.filter((u) => u.status === "pending").length,
     denied: users.filter((u) => u.status === "denied").length,
+    members: users.filter((u) => u.role_id === 1).length,
+    admins: users.filter((u) => u.role_id === 2).length,
+    presidents: users.filter((u) => u.role_id === 3).length,
   }
 
   const getStatusBadge = (status) => {
@@ -126,6 +229,11 @@ const User = () => {
     return user.status === "pending"
   }
 
+  const canChangeRole = (user) => {
+    // Seuls les utilisateurs acceptés peuvent changer de rôle
+    return user.status === "allowed"
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -142,11 +250,11 @@ const User = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestion des utilisateurs</h1>
-        <p className="text-gray-600">Gérez les demandes d'inscription et les comptes utilisateurs</p>
+        <p className="text-gray-600">Gérez les demandes d'inscription, les comptes utilisateurs et leurs rôles</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -162,11 +270,23 @@ const User = () => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Acceptés</p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{stats.allowed}</p>
+              <p className="text-sm font-medium text-gray-600">Admins</p>
+              <p className="text-3xl font-bold text-purple-600 mt-1">{stats.admins}</p>
             </div>
-            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Check className="h-6 w-6 text-green-600" />
+            <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Shield className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Membres</p>
+              <p className="text-3xl font-bold text-blue-600 mt-1">{stats.members}</p>
+            </div>
+            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Users className="h-6 w-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -179,18 +299,6 @@ const User = () => {
             </div>
             <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
               <AlertCircle className="h-6 w-6 text-orange-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Rejetés</p>
-              <p className="text-3xl font-bold text-red-600 mt-1">{stats.denied}</p>
-            </div>
-            <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <X className="h-6 w-6 text-red-600" />
             </div>
           </div>
         </div>
@@ -211,7 +319,7 @@ const User = () => {
             />
           </div>
 
-          {/* Filter */}
+          {/* Status Filter */}
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setFilterStatus("all")}
@@ -219,7 +327,7 @@ const User = () => {
                 filterStatus === "all" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              Tous
+              Tous statuts
             </button>
             <button
               onClick={() => setFilterStatus("allowed")}
@@ -237,13 +345,41 @@ const User = () => {
             >
               En attente
             </button>
+          </div>
+
+          {/* Role Filter */}
+          <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => setFilterStatus("denied")}
+              onClick={() => setFilterRole("all")}
               className={`px-4 py-2 rounded-lg font-medium transition ${
-                filterStatus === "denied" ? "bg-red-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                filterRole === "all" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              Rejetés
+              Tous rôles
+            </button>
+            <button
+              onClick={() => setFilterRole("member")}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                filterRole === "member" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Membres
+            </button>
+            <button
+              onClick={() => setFilterRole("admin")}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                filterRole === "admin" ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Admins
+            </button>
+            <button
+              onClick={() => setFilterRole("president")}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                filterRole === "president" ? "bg-amber-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              Présidents
             </button>
           </div>
         </div>
@@ -256,9 +392,9 @@ const User = () => {
             <UserX className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun utilisateur trouvé</h3>
             <p className="text-gray-600">
-              {searchTerm
+              {searchTerm || filterStatus !== "all" || filterRole !== "all"
                 ? "Essayez de modifier vos critères de recherche"
-                : "Aucun utilisateur ne correspond aux filtres sélectionnés"}
+                : "Aucun utilisateur dans le système"}
             </p>
           </div>
         ) : (
@@ -277,6 +413,9 @@ const User = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rôle
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -335,6 +474,47 @@ const User = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(user.status)}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {editingRoleId === user.user_id ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={selectedRole}
+                            onChange={(e) => setSelectedRole(e.target.value)}
+                            className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                          >
+                            <option value="Membre">Membre</option>
+                            <option value="Admin">Admin</option>
+                            <option value="Président">Président</option>
+                          </select>
+                          <button
+                            onClick={() => handleRoleChange(user.user_id)}
+                            disabled={actionLoading === user.user_id}
+                            className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+                          >
+                            <Save className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={cancelRoleEditing}
+                            className="p-1 text-red-600 hover:text-red-800"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {getRoleBadge(user.role_id)}
+                          {canChangeRole(user) && (
+                            <button
+                              onClick={() => startRoleEditing(user.user_id, user.role_id)}
+                              className="p-1 text-gray-500 hover:text-blue-600 transition"
+                              title="Modifier le rôle"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         {canShowActions(user) && (
@@ -357,6 +537,7 @@ const User = () => {
                             </button>
                           </>
                         )}
+                    
                         <button
                           onClick={() => handleDelete(user.user_id)}
                           disabled={actionLoading === user.user_id}
@@ -416,6 +597,8 @@ const User = () => {
           </div>
         </div>
       )}
+
+     
     </div>
   )
 }
