@@ -73,4 +73,28 @@ export const useUserStore = create((set, get) => ({
       console.error("❌ Erreur lors du rejet :", error);
     }
   },
+  
+  changeRole: async (userId, roleId) => {
+    try {
+      const res = await axiosInstance.put(`/API/users/${userId}/role`, {
+        role_id: roleId,
+      });
+      
+      // Mettre à jour le store localement
+      set({
+        users: get().users.map((u) =>
+          u.user_id === userId ? { ...u, role_id: roleId } : u
+        ),
+        // Mettre à jour aussi selectedUser si c'est le même utilisateur
+        selectedUser: get().selectedUser?.user_id === userId 
+          ? { ...get().selectedUser, role_id: roleId }
+          : get().selectedUser
+      });
+      
+      return res.data;
+    } catch (error) {
+      console.error("❌ Erreur lors du changement de rôle :", error);
+      throw error;
+    }
+  },
 }));
